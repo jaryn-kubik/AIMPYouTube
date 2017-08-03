@@ -145,6 +145,7 @@
     <None Include="Resources\connect_status.html">
       <Filter>Resource Files</Filter>
     </None>
+    <Content Include="youtube-dl.exe" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AIMPYouTube.rc">

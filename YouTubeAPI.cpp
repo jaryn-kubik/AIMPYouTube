@@ -13,6 +13,7 @@
 #include <set>
 #include <map>
 #include <regex>
+#include <array>
 
 YouTubeAPI::DecoderMap YouTubeAPI::SigDecoder;
 
@@ -401,7 +402,97 @@ void YouTubeAPI::ResolveUrl(const std::wstring &url, const std::wstring &playlis
     MessageBox(Plugin::instance()->GetMainWindowHandle(), Plugin::instance()->Lang(L"YouTube.Messages\\CantResolve").c_str(), Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), MB_OK | MB_ICONERROR);
 }
 
+void messageBox(const std::wstring &func)
+{
+	std::wstring err = func;
+
+	LPWSTR messageBuffer = nullptr;
+	DWORD errorMessageID = ::GetLastError();
+	if (errorMessageID != 0)
+	{
+		size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			nullptr, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPWSTR>(&messageBuffer), 0, nullptr);
+
+		if (size > 0)
+			err = func + L" - " + messageBuffer;
+		LocalFree(messageBuffer);
+	}
+
+	MessageBox(Plugin::instance()->GetMainWindowHandle(), err.c_str(), Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), MB_OK | MB_ICONERROR);
+}
+
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+#define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
+
+std::wstring getYoutubeDl()
+{
+	static std::wstring youtube_dl;
+	if (youtube_dl.empty())
+	{
+		WCHAR path[MAX_PATH], drive[_MAX_DRIVE], dir[_MAX_DIR], file[_MAX_FNAME], ext[_MAX_EXT];
+
+		DWORD pathLen = GetModuleFileName(HINST_THISCOMPONENT, path, MAX_PATH);
+		if (!pathLen)
+			messageBox(L"GetModuleFileName");
+
+		_wsplitpath_s(path, drive, dir, file, ext);
+		_wmakepath_s(path, drive, dir, L"youtube-dl", L"exe");
+
+		youtube_dl = path;
+	}
+	return youtube_dl;
+}
+
+std::wstring exec(const std::wstring &id) {
+	std::wstring youtube_dl = L"\"" + getYoutubeDl() + L"\" -g -f bestaudio[ext=m4a]/best[ext=mp4] " + id;
+
+	HANDLE pipeRead = nullptr;
+	HANDLE pipeWrite = nullptr;
+
+	SECURITY_ATTRIBUTES sa;
+	sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+	sa.bInheritHandle = TRUE;
+	sa.lpSecurityDescriptor = nullptr;
+
+	if (!CreatePipe(&pipeRead, &pipeWrite, &sa, 0))
+		messageBox(L"CreatePipe");
+	if (!SetHandleInformation(pipeRead, HANDLE_FLAG_INHERIT, 0))
+		messageBox(L"SetHandleInformation");
+
+	STARTUPINFO si;
+	ZeroMemory(&si, sizeof si);
+	si.cb = sizeof STARTUPINFO;
+	si.hStdError = pipeWrite;
+	si.hStdOutput = pipeWrite;
+	si.dwFlags |= STARTF_USESTDHANDLES;
+
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi, sizeof pi);
+	
+	if (!CreateProcess(nullptr, const_cast<LPWSTR>(youtube_dl.c_str()), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi))
+		messageBox(L"CreateProcess");
+	if (WaitForSingleObject(pi.hProcess, INFINITE) != WAIT_OBJECT_0)
+		messageBox(L"WaitForSingleObject");
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	CloseHandle(pipeWrite);
+
+	DWORD dwRead;
+	std::string result;
+	std::array<char, 512> buffer;
+
+	do
+	{
+		ReadFile(pipeRead, buffer.data(), buffer.size(), &dwRead, nullptr);
+		result.append(buffer.data(), dwRead);
+	} while (dwRead > 0);
+	CloseHandle(pipeRead);
+
+	return Tools::ToWString(result);
+}
+
 std::wstring YouTubeAPI::GetStreamUrl(const std::wstring &id) {
+	return exec(id);
     std::wstring stream_url;
     std::wstring url2(L"http://www.youtube.com/get_video_info?video_id=" + id + L"&el=detailpage&sts=16511");
     AimpHTTP::Get(url2, [&](unsigned char *data, int size) {
