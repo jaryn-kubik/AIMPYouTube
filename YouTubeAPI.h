@@ -42,18 +42,6 @@ public:
 
     static std::wstring GetStreamUrl(const std::wstring &id);
 
-    static void LoadSignatureDecoder();
-    static void DecodeSignature(std::string &sig) {
-        static bool loaded = false;
-        if (!loaded) {
-            LoadSignatureDecoder();
-            loaded = true;
-        }
-
-        for (auto &x : SigDecoder) {
-            x.first(sig, x.second);
-        }
-    }
     static void LoadUserPlaylist(Config::Playlist &);
     static void AddToPlaylist(Config::Playlist &, const std::wstring &trackId);
     static void RemoveFromPlaylist(Config::Playlist &, const std::wstring &trackId);
@@ -69,6 +57,4 @@ private:
     YouTubeAPI();
     YouTubeAPI(const YouTubeAPI &);
     YouTubeAPI &operator=(const YouTubeAPI &);
-
-    static DecoderMap SigDecoder;
 };

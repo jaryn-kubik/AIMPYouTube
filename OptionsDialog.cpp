@@ -91,7 +91,7 @@ void WINAPI OptionsDialog::Notification(int ID) {
                 LPtoDP(hdc, (POINT *)&textSize, 2);
                 int offset = textSize.cx;
 
-                SetWindowPos(control, NULL, 0, 0, offset + 20, 13, SWP_NOZORDER | SWP_NOMOVE);
+                SetWindowPos(control, NULL, 0, 0, offset + 20, 16, SWP_NOZORDER | SWP_NOMOVE);
 
                 RECT rc;
                 control = GetDlgItem(m_handle, editId); GetWindowRect(control, &rc); MapWindowPoints(HWND_DESKTOP, m_handle, (LPPOINT)&rc, 2);
@@ -121,6 +121,8 @@ void WINAPI OptionsDialog::Notification(int ID) {
             SendDlgItemMessage(m_handle, IDC_CHECKONSTARTUP, BM_SETCHECK, Config::GetInt32(L"CheckOnStartup", 1), 0);
             SendDlgItemMessage(m_handle, IDC_CHECKEVERY, BM_SETCHECK, Config::GetInt32(L"CheckEveryEnabled", 1), 0);
             SendDlgItemMessage(m_handle, IDC_CHECKEVERYVALUESPIN, UDM_SETPOS32, 0, Config::GetInt32(L"CheckEveryHours", 1));
+			SendDlgItemMessage(m_handle, IDC_YOUTUBEDLCMD, WM_SETTEXT, 0, (LPARAM)Plugin::instance()->YoutubeDLCmd().c_str());
+			SetDlgItemInt(m_handle, IDC_YOUTUBEDLTIMEOUT, Plugin::instance()->YoutubeDLTimeout(), FALSE);
 
             BOOL enable = SendDlgItemMessage(m_handle, IDC_CHECKEVERY, BM_GETCHECK, 0, 0) == BST_CHECKED;
             EnableWindow(GetDlgItem(m_handle, IDC_CHECKEVERYVALUE), enable);
@@ -133,7 +135,7 @@ void WINAPI OptionsDialog::Notification(int ID) {
             Config::SetString(L"UserId", m_userId);
             Config::SetString(L"UserName", m_userName);
             Config::SetString(L"UserYTName", m_userYTName);
-            Config::SetString(L"UserInfo", m_userInfo);
+            Config::SetString(L"UserInfo", m_userInfo);			
 
             if (m_userId.empty()) {
                 Config::Delete(L"AccessToken");
@@ -146,6 +148,11 @@ void WINAPI OptionsDialog::Notification(int ID) {
                 Config::SetInt32(L"CheckEveryEnabled", SendDlgItemMessage(m_handle, IDC_CHECKEVERY, BM_GETCHECK, 0, 0) == BST_CHECKED);
                 Config::SetInt32(L"CheckOnStartup", SendDlgItemMessage(m_handle, IDC_CHECKONSTARTUP, BM_GETCHECK, 0, 0) == BST_CHECKED);
                 Config::SetInt32(L"MonitorUserPlaylists", SendDlgItemMessage(m_handle, IDC_MONITORPLAYLISTS, BM_GETCHECK, 0, 0) == BST_CHECKED);
+
+				WCHAR buff[4096];
+				SendDlgItemMessage(m_handle, IDC_YOUTUBEDLCMD, WM_GETTEXT, 4096, (LPARAM)buff);
+				Plugin::instance()->YoutubeDLCmd(buff);
+				Plugin::instance()->YoutubeDLTimeout(GetDlgItemInt(m_handle, IDC_YOUTUBEDLTIMEOUT, nullptr, FALSE));
             }
 
             if (m_userPlaylists.size() > 0) {
@@ -661,7 +668,7 @@ BOOL CALLBACK OptionsDialog::DlgProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM 
                  group = GetDlgItem(hwnd, IDC_MONITORGROUPBOX); GetClientRect(group, &rc2); SetWindowPos(group, NULL, 0, 0, rc.right - 21, rc2.bottom, SWP_NOMOVE | SWP_NOZORDER);
             HWND version = GetDlgItem(hwnd, IDC_VERSION);
             GetClientRect(version, &rc2);
-            SetWindowPos(version, NULL, rc.right - /*106*/122, rc.bottom - rc2.bottom - 7, /*100*/120, rc2.bottom, SWP_NOZORDER);
+            SetWindowPos(version, NULL, rc.right - 150, rc.bottom - rc2.bottom - 7, 140, rc2.bottom, SWP_NOZORDER);
 
             HWND manageLink = GetDlgItem(hwnd, IDC_MANAGEEXCLUSIONS);
             GetClientRect(manageLink, &rc2);
@@ -715,6 +722,8 @@ BOOL CALLBACK OptionsDialog::DlgProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM 
                         dialog->UpdateProfileInfo();
                     }
                 break;
+				case IDC_YOUTUBEDLCMD:
+				case IDC_YOUTUBEDLTIMEOUT:
                 case IDC_CHECKEVERYVALUE:
                     if (HIWORD(wParam) == EN_CHANGE) {
                         if (dialog)
@@ -812,7 +821,9 @@ static std::vector<int> s_tabOrder({ IDC_CONNECTBTN,
                                      IDC_MONITORPLAYLISTS,
                                      IDC_CHECKONSTARTUP,
                                      IDC_CHECKEVERY,
-                                     IDC_CHECKEVERYVALUE
+                                     IDC_CHECKEVERYVALUE,
+									 IDC_YOUTUBEDLCMD,
+                                     IDC_YOUTUBEDLTIMEOUT
 });
 
 BOOL WINAPI OptionsDialog::SelectFirstControl() {

@@ -31,3 +31,7 @@
 #define IDC_MONITORPLAYLISTS                    40016
 #define IDC_EXCLUSIONSGROUPBOX                  40018
 #define IDC_MANAGEEXCLUSIONS                    40019
+#define IDC_YOUTUBEDL                           40020
+#define IDC_YOUTUBEDLCMD                        40021
+#define IDC_YOUTUBEDLTIMESTR                    40022
+#define IDC_YOUTUBEDLTIMEOUT                    40023

@@ -146,8 +146,17 @@ HRESULT WINAPI Plugin::Initialize(IAIMPCore *Core) {
     StartMonitorTimer();
     UpdatePlaylistMenu();
 
+	//for some fucking reason config->getvalue doesn't work directly in YouTubeAPI::GetStreamUrl
+	m_youtubeDLCmd = Config::GetString(L"YoutubeDL", L"-f bestaudio[ext=m4a]/best[ext=mp4]");
+	m_youtubeDLTimeout = Config::GetInt32(L"YoutubeDLTimeout", 30);
+
     return S_OK;
 }
+
+std::wstring Plugin::YoutubeDLCmd() const { return m_youtubeDLCmd; }
+int Plugin::YoutubeDLTimeout() const { return m_youtubeDLTimeout; }
+void Plugin::YoutubeDLCmd(std::wstring value) { Config::SetString(L"YoutubeDL", m_youtubeDLCmd = value); }
+void Plugin::YoutubeDLTimeout(int value) { Config::SetInt32(L"YoutubeDLTimeout", m_youtubeDLTimeout = value); }
 
 void Plugin::StartMonitorTimer() {
     bool enabled = Config::GetInt32(L"CheckEveryEnabled", 1) == 1;

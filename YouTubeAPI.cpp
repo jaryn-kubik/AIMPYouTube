@@ -15,8 +15,6 @@
 #include <regex>
 #include <array>
 
-YouTubeAPI::DecoderMap YouTubeAPI::SigDecoder;
-
 void YouTubeAPI::AddFromJson(IAIMPPlaylist *playlist, const rapidjson::Value &d, std::shared_ptr<LoadingState> state) {
     if (!playlist || !state || !Plugin::instance()->core())
         return;
@@ -402,28 +400,30 @@ void YouTubeAPI::ResolveUrl(const std::wstring &url, const std::wstring &playlis
     MessageBox(Plugin::instance()->GetMainWindowHandle(), Plugin::instance()->Lang(L"YouTube.Messages\\CantResolve").c_str(), Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), MB_OK | MB_ICONERROR);
 }
 
-void messageBox(const std::wstring &func)
+std::wstring messageBox(const std::wstring &msg, bool getLastError = true)
 {
-	std::wstring err = func;
+	std::wstring err = msg;
 
-	LPWSTR messageBuffer = nullptr;
-	DWORD errorMessageID = ::GetLastError();
-	if (errorMessageID != 0)
+	if (getLastError)
 	{
-		size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			nullptr, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPWSTR>(&messageBuffer), 0, nullptr);
+		DWORD errorMessageID = GetLastError();
+		if (errorMessageID != 0)
+		{
+			LPWSTR messageBuffer = nullptr;
+			size_t size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				nullptr, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPWSTR>(&messageBuffer), 0, nullptr);
 
-		if (size > 0)
-			err = func + L" - " + messageBuffer;
-		LocalFree(messageBuffer);
+			if (size > 0)
+				err = msg + L" - " + messageBuffer;
+			LocalFree(messageBuffer);
+		}
 	}
 
 	MessageBox(Plugin::instance()->GetMainWindowHandle(), err.c_str(), Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), MB_OK | MB_ICONERROR);
+	return nullptr;
 }
 
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
-#define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
-
 std::wstring getYoutubeDl()
 {
 	static std::wstring youtube_dl;
@@ -431,9 +431,9 @@ std::wstring getYoutubeDl()
 	{
 		WCHAR path[MAX_PATH], drive[_MAX_DRIVE], dir[_MAX_DIR], file[_MAX_FNAME], ext[_MAX_EXT];
 
-		DWORD pathLen = GetModuleFileName(HINST_THISCOMPONENT, path, MAX_PATH);
+		DWORD pathLen = GetModuleFileName(reinterpret_cast<HINSTANCE>(&__ImageBase), path, MAX_PATH);
 		if (!pathLen)
-			messageBox(L"GetModuleFileName");
+			return messageBox(L"GetModuleFileName");
 
 		_wsplitpath_s(path, drive, dir, file, ext);
 		_wmakepath_s(path, drive, dir, L"youtube-dl", L"exe");
@@ -443,8 +443,8 @@ std::wstring getYoutubeDl()
 	return youtube_dl;
 }
 
-std::wstring exec(const std::wstring &id) {
-	std::wstring youtube_dl = L"\"" + getYoutubeDl() + L"\" -g -f bestaudio[ext=m4a]/best[ext=mp4] " + id;
+std::wstring YouTubeAPI::GetStreamUrl(const std::wstring &id) {
+	std::wstring youtube_dl = L"\"" + getYoutubeDl() + L"\" -g " + Plugin::instance()->YoutubeDLCmd() + L" -- " + id;
 
 	HANDLE pipeRead = nullptr;
 	HANDLE pipeWrite = nullptr;
@@ -455,9 +455,9 @@ std::wstring exec(const std::wstring &id) {
 	sa.lpSecurityDescriptor = nullptr;
 
 	if (!CreatePipe(&pipeRead, &pipeWrite, &sa, 0))
-		messageBox(L"CreatePipe");
+		return messageBox(L"CreatePipe");
 	if (!SetHandleInformation(pipeRead, HANDLE_FLAG_INHERIT, 0))
-		messageBox(L"SetHandleInformation");
+		return messageBox(L"SetHandleInformation");
 
 	STARTUPINFO si;
 	ZeroMemory(&si, sizeof si);
@@ -468,11 +468,20 @@ std::wstring exec(const std::wstring &id) {
 
 	PROCESS_INFORMATION pi;
 	ZeroMemory(&pi, sizeof pi);
-	
+
 	if (!CreateProcess(nullptr, const_cast<LPWSTR>(youtube_dl.c_str()), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi))
-		messageBox(L"CreateProcess");
-	if (WaitForSingleObject(pi.hProcess, INFINITE) != WAIT_OBJECT_0)
-		messageBox(L"WaitForSingleObject");
+		return messageBox(L"CreateProcess");
+
+	DWORD waitResult = WaitForSingleObject(pi.hProcess, Plugin::instance()->YoutubeDLTimeout() * 1000);
+	if (waitResult == WAIT_TIMEOUT)
+		return std::wstring();
+	if (waitResult != WAIT_OBJECT_0)
+		return messageBox(L"WaitForSingleObject");
+
+	DWORD lpExitCode;
+	if (!GetExitCodeProcess(pi.hProcess, &lpExitCode))
+		return messageBox(L"GetExitCodeProcess");
+
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
 	CloseHandle(pipeWrite);
@@ -480,7 +489,6 @@ std::wstring exec(const std::wstring &id) {
 	DWORD dwRead;
 	std::string result;
 	std::array<char, 512> buffer;
-
 	do
 	{
 		ReadFile(pipeRead, buffer.data(), buffer.size(), &dwRead, nullptr);
@@ -488,183 +496,11 @@ std::wstring exec(const std::wstring &id) {
 	} while (dwRead > 0);
 	CloseHandle(pipeRead);
 
-	return Tools::ToWString(result);
-}
+	std::wstring wResult = Tools::ToWString(result);
+	if (lpExitCode)
+		return messageBox(wResult, false);
 
-std::wstring YouTubeAPI::GetStreamUrl(const std::wstring &id) {
-	return exec(id);
-    std::wstring stream_url;
-    std::wstring url2(L"http://www.youtube.com/get_video_info?video_id=" + id + L"&el=detailpage&sts=16511");
-    AimpHTTP::Get(url2, [&](unsigned char *data, int size) {
-        if (char *streams = strstr((char *)data, "url_encoded_fmt_stream_map=")) {
-            streams += 27;
-            if (char *end = strchr(streams, '&'))
-                *end = 0;
-            std::string map = Tools::UrlDecode(streams);
-            Tools::ReplaceString(",", "\"},{\"", map);
-            Tools::ReplaceString("&", "\",\"", map);
-            Tools::ReplaceString("=", "\":\"", map);
-            map = "[{\"" + map + "\"}]";
-
-            rapidjson::Document d;
-            d.Parse(map.c_str());
-
-            std::vector<int> streamPriority = {
-                // Audio first
-                140, // m4a 128kbps
-                141, // m4a 256kbps
-                256, // m4a
-                258, // m4a
-                // Video
-                22, // mp4 1280x720  (192kbps)
-                37, // mp4 1920x1080 (192kbps)
-                38, // mp4 4096x3072 (192kbps)
-                59, // mp4 854x480 (128kbps)
-                78, // mp4 854x480 (128kbps)
-                135, // mp4 480p
-                134, // mp4 360p
-                136, // mp4 720p
-                137, // mp4 1080p
-                18,  // mp4 640x360 (96kbps)
-                160, // mp4 144p
-                264, // mp4 1440p
-                266, // mp4 2160p
-                133 // mp4 240p
-            };
-
-            std::map<int, std::wstring> urls;
-
-            std::wstring medium_stream;
-
-            if (d.IsArray()) {
-                for (auto x = d.Begin(), e = d.End(); x != e; x++) {
-                    const rapidjson::Value &px = *x;
-                    if (!px.IsObject())
-                        continue;
-
-                    std::string stream = Tools::UrlDecode(px["url"].GetString());
-                    if (px.HasMember("s")) {
-                        std::string s = px["s"].GetString();
-                        YouTubeAPI::DecodeSignature(s);
-                        stream += "&signature=" + s;
-                    }
-                    std::wstring wstream = Tools::ToWString(stream);
-
-                    if (px.HasMember("itag")) {
-                        int itag = std::stoi(px["itag"].GetString());
-                        urls[itag] = wstream;
-                    }
-
-                    if (px.HasMember("quality") && strcmp(px["quality"].GetString(), "medium") == 0 && !px.HasMember("stereo3d") && strstr(px["type"].GetString(), "mp4") != nullptr) {
-                        medium_stream = wstream;
-                    }
-                }
-            }
-            for (auto x : streamPriority) {
-                if (urls.find(x) != urls.end()) {
-                    stream_url = urls[x];
-                    break;
-                }
-            }
-
-            if (stream_url.empty() && !medium_stream.empty()) {
-                stream_url = medium_stream;
-            }
-
-            // If none of preferred streams are available, get the first one
-            if (stream_url.empty() && urls.size() > 0) {
-                stream_url = urls.begin()->second;
-            }
-        }
-    }, true);
-    return stream_url;
-}
-
-void YouTubeAPI::LoadSignatureDecoder() {
-    // TODO: http://en.cppreference.com/w/cpp/regex/regex_match
-
-    std::wstring ua(L"Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36");
-    AimpHTTP::Get(L"https://www.youtube.com/\r\nUser-Agent: " + ua, [](unsigned char *data, int size) {
-        if (char *playerurl = strstr((char *)data, "\"js\":\"")) {
-            playerurl += 6;
-            if (char *end = strchr(playerurl, '"'))
-                *end = 0;
-            std::string player = playerurl;
-            Tools::ReplaceString("\\/", "/", player);
-            if (player.find("http") == std::string::npos)
-                player = "http://www.youtube.com" + player;
-
-            AimpHTTP::Get(Tools::ToWString(player), [](unsigned char *rawData, int size) {
-                std::string data(reinterpret_cast<char *>(rawData), size);
-                Tools::ReplaceString("\n", "", data);
-                Tools::ReplaceString("\r", "", data);
-
-                std::size_t funcname;
-                if ((funcname = data.find(".set(\"signature\",")) != std::string::npos) {
-                    funcname += 17;
-                    std::size_t end;
-                    if ((end = data.find('(', funcname)) != std::string::npos) {
-                        std::string fname(data.substr(funcname, end - funcname));
-                        std::string funcsig = "function " + fname + "(";
-                        std::string funcsig2 = ";" + fname + "=function";
-                        int sigLen = 0;
-                        std::size_t funcdef = data.find(funcsig);
-                        if (funcdef != std::string::npos) {
-                            sigLen = funcsig.size() + 4;
-                        } else {
-                            funcdef = data.find(funcsig2);
-                            sigLen = funcsig2.size() + 4;
-                        }
-                        if (funcdef != std::string::npos) {
-                            size_t mutatorObject = data.find("split(\"\");", funcdef) + 10;
-                            std::string mutatorObjectName(data.substr(mutatorObject, data.find('.', mutatorObject) - mutatorObject));
-                            mutatorObjectName = "var " + mutatorObjectName + "=";
-                            
-                            size_t mutatorObjectStart;
-                            if ((mutatorObjectStart = data.find(mutatorObjectName)) != std::string::npos) {
-                                mutatorObjectStart += mutatorObjectName.length() + 1;
-                                size_t mutatorObjectEnd = data.find("};", mutatorObjectStart);
-                                end = data.find("join(\"\")", funcdef);
-                                funcdef += sigLen;
-
-                                std::map<std::string, std::function<void(std::string &s, int param)>> mutators;
-                                std::string mutStr = data.substr(mutatorObjectStart, mutatorObjectEnd - mutatorObjectStart);
-                                Tools::SplitString(mutStr, "},", [&](std::string token) {
-                                    token = Tools::Trim(token);
-                                    std::string name(token.substr(0, 2));
-                                    if (token.find("var ") != std::string::npos)
-                                        mutators[name] = [](std::string &s, int param) { std::swap(s[0], s[param]); };
-
-                                    if (token.find("splice") != std::string::npos)
-                                        mutators[name] = [](std::string &s, int param) { s.erase(0, param); };
-
-                                    if (token.find("reverse") != std::string::npos)
-                                        mutators[name] = [](std::string &s, int param) { std::reverse(s.begin(), s.end()); };
-                                });
-
-                                Tools::SplitString(data.substr(funcdef, end - funcdef), ";", [&](std::string token) {
-                                    token = Tools::Trim(token);
-                                    if (token.find("split") != std::string::npos || token.find("return") != std::string::npos)
-                                        return;
-
-                                    std::string mutator(token.substr(3, 2));
-                                    if (char *params = strchr((char *)token.c_str(), ',')) {
-                                        if (char *end = strchr(params, ')')) *end = 0;
-                                        int param = std::stoi(params + 1);
-                                        if (mutators.find(mutator) != mutators.end()) {
-                                            YouTubeAPI::SigDecoder.push_back({ mutators[mutator], param });
-                                        } else {
-                                            DebugA("Unknown mutator: %s\n", mutator.c_str());
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                    }
-                }
-            }, true);
-        }
-    }, true);
+	return wResult;
 }
 
 void YouTubeAPI::AddToPlaylist(Config::Playlist &pl, const std::wstring &trackId) {
