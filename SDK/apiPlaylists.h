@@ -16,6 +16,7 @@
 
 #include <windows.h>
 #include <unknwn.h>
+#include <tchar.h>
 #include "apiObjects.h"
 #include "apiThreading.h"
 
