@@ -1,12 +1,12 @@
 /************************************************/
 /*                                              */
 /*          AIMP Programming Interface          */
-/*               v3.60 build 1455               */
+/*               v4.50 build 2000               */
 /*                                              */
 /*                Artem Izmaylov                */
-/*                (C) 2006-2015                 */
+/*                (C) 2006-2017                 */
 /*                 www.aimp.ru                  */
-/*              ICQ: 345-908-513                */
+/*                                              */
 /*            Mail: support@aimp.ru             */
 /*                                              */
 /************************************************/
@@ -21,6 +21,7 @@
 #include "apiFileManager.h"
 
 static const GUID IID_IAIMPAudioDecoder = {0x41494D50, 0x4175, 0x6469, 0x6F, 0x44, 0x65, 0x63, 0x00, 0x00, 0x00, 0x00};
+static const GUID IID_IAIMPAudioDecoderBufferingProgress = {0x41494D50, 0x4175, 0x6469, 0x6F, 0x44, 0x65, 0x63, 0x42, 0x75, 0x66, 0x66};
 static const GUID IID_IAIMPExtensionAudioDecoder = {0x41494D50, 0x4578, 0x7441, 0x75, 0x64, 0x69, 0x6F, 0x44, 0x65, 0x63, 0x00};
 static const GUID IID_IAIMPExtensionAudioDecoderOld = {0x41494D50, 0x4578, 0x7441, 0x75, 0x64, 0x69, 0x6F, 0x44, 0x65, 0x63, 0x4F};
 static const GUID IID_IAIMPServiceAudioDecoders = {0x41494D50, 0x5372, 0x7641, 0x75, 0x64, 0x69, 0x6F, 0x44, 0x65, 0x63, 0x00};
@@ -52,8 +53,16 @@ class IAIMPAudioDecoder: public IUnknown
 
 		virtual int WINAPI Read(void *Buffer, int Count) = 0;
 };
-  
-/* IAIMPAudioDecoderExtension */
+
+/* IAIMPAudioDecoderBufferingProgress */
+
+class IAIMPAudioDecoderBufferingProgress: public IUnknown
+{
+	public:
+		virtual BOOL WINAPI Get(double* Value) = 0;
+};
+
+/* IAIMPExtensionAudioDecoder */
   
 class IAIMPExtensionAudioDecoder: public IUnknown
 {

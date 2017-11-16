@@ -1,10 +1,10 @@
 /************************************************/
 /*                                              */
 /*          AIMP Programming Interface          */
-/*               v4.00 build 1660               */
+/*               v4.10 build 1800               */
 /*                                              */
 /*                Artem Izmaylov                */
-/*                (C) 2006-2015                 */
+/*                (C) 2006-2016                 */
 /*                 www.aimp.ru                  */
 /*                 www.aimp.ru                  */
 /*            Mail: support@aimp.ru             */
@@ -36,7 +36,7 @@ static const GUID IID_IAIMPFileSystem = {0x41494D50, 0x4653, 0x0000, 0x00, 0x00,
 static const GUID IID_IAIMPFileSystemCommandCopyToClipboard = {0x41465343, 0x6D64, 0x436F, 0x70, 0x79, 0x32, 0x43, 0x6C, 0x70, 0x62, 0x64};
 static const GUID IID_IAIMPFileSystemCommandDelete = {0x41465343, 0x6D64, 0x4465, 0x6C, 0x65, 0x74, 0x65, 0x00, 0x00, 0x00, 0x00};
 static const GUID IID_IAIMPFileSystemCommandDropSource = {0x41465343, 0x6D64, 0x4472, 0x6F, 0x70, 0x53, 0x72, 0x63, 0x00, 0x00, 0x00};
-static const GUID IID_IAIMPFileSystemCommandFileExists = {0x41465343, 0x6D64, 0x4669, 0x6C, 0x65, 0x45, 0x78, 0x69, 0x73, 0x74, 0x73};
+static const GUID IID_IAIMPFileSystemCommandFileExists = {0x41465343, 0x6D64, 0x4669, 0x6C, 0x65, 0x45, 0x78, 0x69, 0x73, 0x74, 0x70};
 static const GUID IID_IAIMPFileSystemCommandFileInfo = { 0x41494D50, 0x4578, 0x7446, 0x69, 0x6C, 0x65, 0x49, 0x6E, 0x66, 0x6F, 0x00};
 static const GUID IID_IAIMPFileSystemCommandOpenFileFolder = {0x41465343, 0x6D64, 0x4669, 0x6C, 0x65, 0x46, 0x6C, 0x64, 0x72, 0x00, 0x00};
 static const GUID IID_IAIMPFileSystemCommandStreaming = {0x41465343, 0x6D64, 0x5374, 0x72, 0x65, 0x61, 0x6D, 0x69, 0x6E, 0x67, 0x00};
@@ -189,7 +189,7 @@ class IAIMPFileSystemCommandDropSource : public IUnknown
 class IAIMPFileSystemCommandFileInfo : public IUnknown 
 {
 	public:
-		virtual HRESULT WINAPI GetFileAttrs(IAIMPString* FileName, TAIMPFileAttributes** Attrs) = 0;
+		virtual HRESULT WINAPI GetFileAttrs(IAIMPString* FileName, TAIMPFileAttributes* Attrs) = 0;
 		virtual HRESULT WINAPI GetFileSize(IAIMPString* FileName, INT64* Size) = 0;
 		virtual HRESULT WINAPI IsFileExists(IAIMPString* FileName) = 0;
 };
@@ -227,7 +227,7 @@ class IAIMPExtensionFileFormat: public IUnknown
 	public:
 		virtual HRESULT WINAPI GetDescription(IAIMPString **S) = 0;
 		virtual HRESULT WINAPI GetExtList(IAIMPString **S) = 0;
-		virtual HRESULT WINAPI GetFlags(DWORD **S) = 0;
+		virtual HRESULT WINAPI GetFlags(DWORD *S) = 0;
 };
 
 /* IAIMPExtensionFileInfoProvider */

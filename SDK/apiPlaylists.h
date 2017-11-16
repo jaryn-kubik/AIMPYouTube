@@ -1,10 +1,10 @@
 /************************************************/
 /*                                              */
 /*          AIMP Programming Interface          */
-/*               v4.00 build 1660               */
+/*               v4.50 build 2000               */
 /*                                              */
 /*                Artem Izmaylov                */
-/*                (C) 2006-2015                 */
+/*                (C) 2006-2017                 */
 /*                 www.aimp.ru                  */
 /*                                              */
 /*            Mail: support@aimp.ru             */
@@ -129,19 +129,27 @@ const int AIMP_PLAYLIST_NOTIFY_FILEINFO       = 64;
 const int AIMP_PLAYLIST_NOTIFY_STATISTICS     = 128;
 const int AIMP_PLAYLIST_NOTIFY_PLAYINGSWITCHS = 256;
 const int AIMP_PLAYLIST_NOTIFY_PREIMAGE       = 512;
+const int AIMP_PLAYLIST_NOTIFY_MODIFIED       = 1024;
+const int AIMP_PLAYLIST_NOTIFY_DEADSTATE      = 2048;
+const int AIMP_PLAYLIST_NOTIFY_MAKEVISIBLE    = 4096;
 
 // Properties IDS for IAIMPPlaylistPreimage
 const int AIMP_PLAYLISTPREIMAGE_PROPID_FACTORYID = 1;
 const int AIMP_PLAYLISTPREIMAGE_PROPID_AUTOSYNC = 2;
 const int AIMP_PLAYLISTPREIMAGE_PROPID_HASDIALOG = 3;
 const int AIMP_PLAYLISTPREIMAGE_PROPID_SORTTEMPLATE = 4;
+const int AIMP_PLAYLISTPREIMAGE_PROPID_AUTOSYNC_ON_STARTUP = 5;
 
-// Properties IDs for IAIMPPlaylistPreimageFolders
-const int AIMP_PLAYLISTPREIMAGEFOLDERS_PROPID_AUTOSYNC_ON_STARTUP = 100;
+// Properties Ids for AIMP_PREIMAGEFACTORY_PLAYLIST_ID
+const int AIMP_PLAYLISTPREIMAGE_PLAYLISTBASED_PROPID_URI = 100;
+
+// Flags for IAIMPExtensionPlaylistPreimageFactory.GetFlags
+const int AIMP_PREIMAGEFACTORY_FLAG_CONTEXTDEPENDENT = 1;
 
 // Built-in Preimage Factories
-//const WCHAR* AIMP_PREIMAGEFACTORY_FOLDERS_ID = TEXT("TAIMPPlaylistFoldersPreimage");
-//const WCHAR* AIMP_PREIMAGEFACTORY_MUSICLIBRARY_ID = TEXT("TAIMPMLPlaylistPreimage");
+static const WCHAR* AIMP_PREIMAGEFACTORY_FOLDERS_ID = _T("TAIMPPlaylistFoldersPreimage");
+static const WCHAR* AIMP_PREIMAGEFACTORY_MUSICLIBRARY_ID = _T("TAIMPMLPlaylistPreimage");
+static const WCHAR* AIMP_PREIMAGEFACTORY_PLAYLIST_ID = _T("TAIMPPlaylistBasedPreimage");
 
 /* IAIMPPlaylistItem */
 
@@ -327,6 +335,7 @@ class IAIMPExtensionPlaylistPreimageFactory : public IUnknown
 		virtual HRESULT WINAPI CreatePreimage(IAIMPPlaylistPreimage** preimage) = 0;
 		virtual HRESULT WINAPI GetID(IAIMPString** ID) = 0;
 		virtual HRESULT WINAPI GetName(IAIMPString** Name) = 0;
+		virtual DWORD WINAPI GetFlags() = 0;
 };
 
 
