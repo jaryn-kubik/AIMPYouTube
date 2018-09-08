@@ -58,6 +58,8 @@ void YouTubeAPI::AddFromJson(IAIMPPlaylist *playlist, const rapidjson::Value &d,
                 state->PlaylistToUpdate->Items.insert(trackId);
             }
 
+            auto permalink = L"https://www.youtube.com/watch?v=" + trackId;
+
             std::wstring filename(L"youtube://");
             filename += trackId + L"/";
             filename += final_title;
@@ -70,6 +72,7 @@ void YouTubeAPI::AddFromJson(IAIMPPlaylist *playlist, const rapidjson::Value &d,
             if (item.HasMember("channelTitle") && (state->Flags & LoadingState::AddChannelTitle)) {
                 file_info->SetValueAsObject(AIMP_FILEINFO_PROPID_ARTIST, AIMPString(item["channelTitle"]));
             }
+            file_info->SetValueAsObject(AIMP_FILEINFO_PROPID_URL, AIMPString(permalink));
 
             int64_t videoDuration = 0;
             if (contentDetails.IsObject() && contentDetails.HasMember("duration")) {
@@ -95,7 +98,6 @@ void YouTubeAPI::AddFromJson(IAIMPPlaylist *playlist, const rapidjson::Value &d,
                 artwork = Tools::ToWString(item["thumbnails"]["high"]["url"]);
             }
 
-            auto permalink = L"https://www.youtube.com/watch?v=" + trackId;
 
             Config::TrackInfos[trackId] = Config::TrackInfo(final_title, trackId, permalink, artwork, videoDuration);
 
@@ -158,7 +160,14 @@ void YouTubeAPI::LoadFromUrl(std::wstring url, IAIMPPlaylist *playlist, std::sha
             std::wstring userName = Tools::ToWString(d["items"][0]["snippet"]["localized"]["title"]);
             IAIMPPropertyList *plProp = nullptr;
             if (SUCCEEDED(playlist->QueryInterface(IID_IAIMPPropertyList, reinterpret_cast<void **>(&plProp)))) {
-                plProp->SetValueAsObject(AIMP_PLAYLIST_PROPID_NAME, AIMPString(userName));
+                bool isRenamed = true;
+                IAIMPString *str = nullptr;
+                if (SUCCEEDED(plProp->GetValueAsObject(AIMP_PLAYLIST_PROPID_NAME, IID_IAIMPString, reinterpret_cast<void **>(&str)))) {
+                    isRenamed = wcscmp(L"YouTube", str->GetData());
+                    str->Release();
+                }
+                if (!isRenamed)
+                    plProp->SetValueAsObject(AIMP_PLAYLIST_PROPID_NAME, AIMPString(userName));
                 plProp->Release();
             }
             state->ReferenceName = userName;
@@ -333,11 +342,11 @@ void YouTubeAPI::ResolveUrl(const std::wstring &url, const std::wstring &playlis
         if (createPlaylist) {
             finalPlaylistName = playlistTitle.empty() ? plName : playlistTitle;
             pl = Plugin::instance()->GetPlaylist(finalPlaylistName);
-            if (!pl) 
+            if (!pl)
                 return;
         } else {
             pl = Plugin::instance()->GetCurrentPlaylist();
-            if (!pl) 
+            if (!pl)
                 return;
         }
 
