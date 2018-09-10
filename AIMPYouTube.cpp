@@ -147,7 +147,7 @@ HRESULT WINAPI Plugin::Initialize(IAIMPCore *Core) {
     UpdatePlaylistMenu();
 
 	//for some fucking reason config->getvalue doesn't work directly in YouTubeAPI::GetStreamUrl
-	m_youtubeDLCmd = Config::GetString(L"YoutubeDL", L"-f bestaudio[ext=m4a]/best[ext=mp4]");
+	m_youtubeDLCmd = Config::GetString(L"YoutubeDL", L"-f best[ext=mp4]/best");
 	m_youtubeDLTimeout = Config::GetInt32(L"YoutubeDLTimeout", 30);
 
     return S_OK;
