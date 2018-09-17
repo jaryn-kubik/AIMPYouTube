@@ -78,7 +78,7 @@ void WINAPI MessageHook::CoreMessage(DWORD AMessage, int AParam1, void *AParam2,
     if (AMessage == AIMP_MSG_CMD_BOOKMARKS_ADD) {
         IAIMPString *url = nullptr;
         IAIMPPlaylistItem *currentTrack = m_plugin->GetCurrentTrack();
-        if (SUCCEEDED(currentTrack->GetValueAsObject(AIMP_PLAYLISTITEM_PROPID_FILENAME, IID_IAIMPString, reinterpret_cast<void **>(&url)))) {
+        if (currentTrack && SUCCEEDED(currentTrack->GetValueAsObject(AIMP_PLAYLISTITEM_PROPID_FILENAME, IID_IAIMPString, reinterpret_cast<void **>(&url)))) {
             std::wstring id = Tools::TrackIdFromUrl(url->GetData());
             url->Release();
             currentTrack->Release();
