@@ -68,7 +68,7 @@ FONT 8, "Tahoma", 400, 0, 0
     LTEXT           "timeout (s)", IDC_YOUTUBEDLTIMESTR, 15, 187, 45, 8, 0, WS_EX_LEFT | WS_TABSTOP
     EDITTEXT        IDC_YOUTUBEDLTIMEOUT, 60, 185, 25, 12, ES_NUMBER, WS_EX_LEFT | WS_TABSTOP
     LTEXT           "Manage track exclusions", IDC_MANAGEEXCLUSIONS, 20, 244, 285, 8, SS_LEFT | SS_NOTIFY, WS_EX_LEFT
-    LTEXT           "aimp_YouTube v1.1.3", IDC_VERSION, 30, 244, 285, 8, SS_LEFT | SS_NOTIFY, WS_EX_LEFT
+    LTEXT           "aimp_YouTube v1.1.4", IDC_VERSION, 30, 244, 285, 8, SS_LEFT | SS_NOTIFY, WS_EX_LEFT
 }
 
 
