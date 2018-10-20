@@ -455,24 +455,30 @@ std::wstring getYoutubeDl()
 std::wstring YouTubeAPI::GetStreamUrl(const std::wstring &id) {
 	std::wstring youtube_dl = L"\"" + getYoutubeDl() + L"\" -g " + Plugin::instance()->YoutubeDLCmd() + L" -- " + id;
 
-	HANDLE pipeRead = nullptr;
-	HANDLE pipeWrite = nullptr;
+	HANDLE pipeReadOut = nullptr;
+	HANDLE pipeReadErr = nullptr;
+	HANDLE pipeWriteOut = nullptr;
+	HANDLE pipeWriteErr = nullptr;
 
 	SECURITY_ATTRIBUTES sa;
 	sa.nLength = sizeof(SECURITY_ATTRIBUTES);
 	sa.bInheritHandle = TRUE;
 	sa.lpSecurityDescriptor = nullptr;
 
-	if (!CreatePipe(&pipeRead, &pipeWrite, &sa, 0))
+	if (!CreatePipe(&pipeReadOut, &pipeWriteOut, &sa, 0))
 		return messageBox(L"CreatePipe");
-	if (!SetHandleInformation(pipeRead, HANDLE_FLAG_INHERIT, 0))
+	if (!CreatePipe(&pipeReadErr, &pipeWriteErr, &sa, 0))
+		return messageBox(L"CreatePipe");
+	if (!SetHandleInformation(pipeReadOut, HANDLE_FLAG_INHERIT, 0))
+		return messageBox(L"SetHandleInformation");
+	if (!SetHandleInformation(pipeReadErr, HANDLE_FLAG_INHERIT, 0))
 		return messageBox(L"SetHandleInformation");
 
 	STARTUPINFO si;
 	ZeroMemory(&si, sizeof si);
 	si.cb = sizeof STARTUPINFO;
-	si.hStdError = pipeWrite;
-	si.hStdOutput = pipeWrite;
+	si.hStdOutput = pipeWriteOut;
+	si.hStdError = pipeWriteErr;
 	si.dwFlags |= STARTF_USESTDHANDLES;
 
 	PROCESS_INFORMATION pi;
@@ -493,22 +499,32 @@ std::wstring YouTubeAPI::GetStreamUrl(const std::wstring &id) {
 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
-	CloseHandle(pipeWrite);
+	CloseHandle(pipeWriteOut);
+	CloseHandle(pipeWriteErr);
 
 	DWORD dwRead;
 	std::string result;
 	std::array<char, 512> buffer;
 	do
 	{
-		ReadFile(pipeRead, buffer.data(), buffer.size(), &dwRead, nullptr);
+		ReadFile(pipeReadOut, buffer.data(), buffer.size(), &dwRead, nullptr);
 		result.append(buffer.data(), dwRead);
 	} while (dwRead > 0);
-	CloseHandle(pipeRead);
+	CloseHandle(pipeReadOut);
+
+	std::string error;
+	do
+	{
+		ReadFile(pipeReadErr, buffer.data(), buffer.size(), &dwRead, nullptr);
+		error.append(buffer.data(), dwRead);
+	} while (dwRead > 0);
+	CloseHandle(pipeReadErr);
+
+	std::wstring wError = Tools::ToWString(error);
+	if (lpExitCode)
+		return messageBox(wError, false);
 
 	std::wstring wResult = Tools::ToWString(result);
-	if (lpExitCode)
-		return messageBox(wResult, false);
-
 	return wResult;
 }
 
