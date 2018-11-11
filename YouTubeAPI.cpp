@@ -409,7 +409,7 @@ void YouTubeAPI::ResolveUrl(const std::wstring &url, const std::wstring &playlis
     MessageBox(Plugin::instance()->GetMainWindowHandle(), Plugin::instance()->Lang(L"YouTube.Messages\\CantResolve").c_str(), Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), MB_OK | MB_ICONERROR);
 }
 
-std::wstring messageBox(const std::wstring &msg, bool getLastError = true)
+std::wstring messageBox(const std::wstring &msg, bool getLastError)
 {
 	std::wstring err = msg;
 

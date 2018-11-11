@@ -58,3 +58,6 @@ private:
     YouTubeAPI(const YouTubeAPI &);
     YouTubeAPI &operator=(const YouTubeAPI &);
 };
+
+std::wstring messageBox(const std::wstring &msg, bool getLastError = true);
+std::wstring getYoutubeDl();

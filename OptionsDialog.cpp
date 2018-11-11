@@ -7,6 +7,7 @@
 #include "rapidjson/document.h"
 #include "AIMPYouTube.h"
 #include "ExclusionsDialog.h"
+#include "YouTubeAPI.h"
 #include <Shellapi.h>
 #include <ctime>
 
@@ -744,6 +745,14 @@ BOOL CALLBACK OptionsDialog::DlgProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM 
                         }
                     }
                 break;
+				case IDC_YOUTUBEDL_UPDATE:
+				{
+					auto cmd = L"/c \"" + getYoutubeDl() + L"\" -U & pause";
+					auto result = (int)ShellExecuteW(nullptr, L"runas", L"cmd", cmd.c_str(), nullptr, SW_SHOWNORMAL);
+					if (result <= 32)
+						messageBox(L"ShellExecuteW - " + std::to_wstring(result));
+				}
+				break;
             }
         } break;
         case WM_DESTROY:

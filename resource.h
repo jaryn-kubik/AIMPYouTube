@@ -35,3 +35,4 @@
 #define IDC_YOUTUBEDLCMD                        40021
 #define IDC_YOUTUBEDLTIMESTR                    40022
 #define IDC_YOUTUBEDLTIMEOUT                    40023
+#define IDC_YOUTUBEDL_UPDATE					40024
