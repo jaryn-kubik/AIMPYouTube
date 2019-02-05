@@ -15,6 +15,8 @@
 #include <regex>
 #include <array>
 
+extern DWORD g_MainThreadId;
+
 void YouTubeAPI::AddFromJson(IAIMPPlaylist *playlist, const rapidjson::Value &d, std::shared_ptr<LoadingState> state) {
     if (!playlist || !state || !Plugin::instance()->core())
         return;
@@ -406,7 +408,12 @@ void YouTubeAPI::ResolveUrl(const std::wstring &url, const std::wstring &playlis
         return;
     }
 
-    MessageBox(Plugin::instance()->GetMainWindowHandle(), Plugin::instance()->Lang(L"YouTube.Messages\\CantResolve").c_str(), Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), MB_OK | MB_ICONERROR);
+	if (g_MainThreadId == GetCurrentThreadId())
+		MessageBox(
+			Plugin::instance()->GetMainWindowHandle(), 
+			Plugin::instance()->Lang(L"YouTube.Messages\\CantResolve").c_str(), 
+			Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), 
+			MB_OK | MB_ICONERROR);
 }
 
 std::wstring messageBox(const std::wstring &msg, bool getLastError)
