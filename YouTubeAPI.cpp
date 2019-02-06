@@ -435,7 +435,8 @@ std::wstring messageBox(const std::wstring &msg, bool getLastError)
 		}
 	}
 
-	MessageBox(Plugin::instance()->GetMainWindowHandle(), err.c_str(), Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), MB_OK | MB_ICONERROR);
+	if (g_MainThreadId == GetCurrentThreadId())
+		MessageBox(Plugin::instance()->GetMainWindowHandle(), err.c_str(), Plugin::instance()->Lang(L"YouTube.Messages\\Error").c_str(), MB_OK | MB_ICONERROR);
 	return nullptr;
 }
 
